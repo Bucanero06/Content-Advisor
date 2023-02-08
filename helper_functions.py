@@ -105,8 +105,8 @@ def ask_question(episode_df, pre_context_prompt, question, top_n_context=4,
     episode_df = episode_df.sort_values("similarities", ascending=False).head(top_n_context)
 
     print(f'{episode_df = }')
-
-    episode_df.to_csv("sorted.csv")
+    #
+    # episode_df.to_csv("sorted.csv")
 
     context = []
     for i, row in episode_df.iterrows():

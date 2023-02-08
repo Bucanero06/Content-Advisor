@@ -49,6 +49,30 @@ def is_part_of_question(segment, start, end):
     return False
 
 
+def combine_episodes(input_dir, prefix, output_file):
+    # import pandas as pd
+    # df = pd.DataFrame()
+    # import os
+    # episodes_numbers_list = list(map(lambda x: x.split('_')[-1].split('.')[0], os.listdir(input_dir)))
+    # for episode in episodes_numbers_list:
+    #     episode_df = pd.read_csv(f'{input_dir}/{prefix}_{episode}.csv')
+    #     df = df.append(episode_df)
+    # df.to_csv(output_file)
+
+    # optimize the above code
+    import pandas as pd
+    import glob
+    import os
+    os.chdir(input_dir)
+    extension = 'csv'
+    all_filenames = [i for i in glob.glob('*.{}'.format(extension))]
+    combined_csv = pd.concat([pd.read_csv(f) for f in all_filenames])
+
+    print(f'Saving combined csv to {output_file}, includes episodes files: {all_filenames}')
+    combined_csv.to_csv(output_file, index=False, encoding='utf-8-sig')
+    return combined_csv
+
+
 # def get_question_context(row, transcription_output):
 def get_question_context(row):
     global transcription_output
@@ -64,13 +88,21 @@ def get_question_context(row):
     return context
 
 
-def ask_question(episode_df, question, completion_model='text-embedding-ada-002'):
-    from openai.embeddings_utils import get_embedding,cosine_similarity
+def ask_question(episode_df, pre_context_prompt, question, top_n_context=4,
+                 completion_model="text-davinci-003",
+                 embedding_model='text-embedding-ada-002',
+                 temperature=1,
+                 max_tokens=500,
+                 top_p=1,
+                 frequency_penalty=0,
+                 presence_penalty=0,
+                 ):
+    from openai.embeddings_utils import get_embedding, cosine_similarity
 
-    question_vector = get_embedding(question, engine=completion_model)
+    question_vector = get_embedding(question, engine=embedding_model)
 
     episode_df["similarities"] = episode_df['embedding'].apply(lambda x: cosine_similarity(x, question_vector))
-    episode_df = episode_df.sort_values("similarities", ascending=False).head(4)
+    episode_df = episode_df.sort_values("similarities", ascending=False).head(top_n_context)
 
     print(f'{episode_df = }')
 
@@ -89,8 +121,15 @@ def ask_question(episode_df, question, completion_model='text-embedding-ada-002'
 
     print(f'{context = }')
 
+    # prompt = f"""Answer the following question using only the context below. Answer in the style of Ben Carlson a financial advisor and podcaster. If you don't know the answer for certain, say I don't know.
+    #
+    # Context:
+    # {context}
+    #
+    # Q: {question}
+    # A:"""
 
-    prompt = f"""Answer the following question using only the context below. Answer in the style of Ben Carlson a financial advisor and podcaster. If you don't know the answer for certain, say I don't know.
+    prompt = f"""{pre_context_prompt}
 
     Context:
     {context}
@@ -98,15 +137,17 @@ def ask_question(episode_df, question, completion_model='text-embedding-ada-002'
     Q: {question}
     A:"""
 
+    print(f'{prompt = }')
+
     import openai
     completion = openai.Completion.create(
         prompt=prompt,
-        temperature=1,
-        max_tokens=500,
-        top_p=1,
-        frequency_penalty=0,
-        presence_penalty=0,
-        model=completion_model
+        engine=completion_model,
+        temperature=temperature,
+        max_tokens=max_tokens,
+        top_p=top_p,
+        frequency_penalty=frequency_penalty,
+        presence_penalty=presence_penalty,
     )["choices"][0]["text"].strip(" \n")
 
     print(f'{completion = }')

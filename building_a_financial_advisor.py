@@ -4,6 +4,7 @@
 #       can, simply remember to create a new fork and follow common git practices for the time being. DO-NOT delete works
 #       of others!!! instead contribute in modules and create a pull request.
 #       Microservices (use of modules, classes, endpoints) is the way to go.
+#       Most help appreciated for continuous integration and testing (CI/CD) and documentation.
 #  - suggestions of better context for the question
 #  - use pretrained models for a more robust solution both for the embeddings and the completions
 #  - move from script to a web app

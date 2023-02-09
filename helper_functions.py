@@ -113,8 +113,17 @@ def ask_question(episode_df, pre_context_prompt, question, top_n_context=4,
 
     # episode_df["similarities"] = episode_df['embedding'].apply(lambda x: cosine_similarity(x, question_vector))
     # np.array(eval(a)), np.array(b) included -------------------------------------------------------vvvvv bug waiting to happen
-    episode_df["similarities"] = episode_df['embedding'].apply(lambda x: cosine_similarity(np.array(eval(x)),
-                                                                                           np.array(question_vector)))
+    episode_df["similarities"] = episode_df['embedding'].apply(
+        # lambda x: cosine_similarity(np.array(
+        #     eval(x) if isinstance(x, str) or isinstance(x, bytes)
+        #     else x if not None else 0,
+        #     np.array(question_vector)
+        # )
+        # )
+        #
+        lambda x: cosine_similarity(np.array(eval(x)), np.array(question_vector)
+
+                                    ))
 
     episode_df = episode_df.sort_values("similarities", ascending=False).head(top_n_context)
 
@@ -125,7 +134,6 @@ def ask_question(episode_df, pre_context_prompt, question, top_n_context=4,
     context = []
     for i, row in episode_df.iterrows():
         context.append(row['context'])
-
 
     context = "\n".join(context)
 

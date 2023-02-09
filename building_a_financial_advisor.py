@@ -4,6 +4,7 @@
 #  - use pretrained models for a more robust solution both for the embeddings and the completions
 #  - move from script to a web app
 #  - add description of channel, etc... in the prompt
+#  - add a way to add more context to the prompt in a more interactive way like a conversation
 #  - relies on data preparation modules which should be chosen based on the data type itself
 #     - Input Models
 #       - youtube module
@@ -54,14 +55,29 @@ question = "Give me the best advice you have for someone who is just starting ou
                 beautiful baby girl as a 25 year old woman"
 """
 
-question = "Should I buy a house with cash?"
+question = "Buying a car vs leasing a car, pros and cons"
 
-input_data_file = 'example_questions_dataset.csv'
-top_n_context = 2
+INPUT_DATA_FILE_NAME = 'example_questions_dataset.csv'
+TOP_N_CONTEXT = 2
+
 N_EPISODES = -1
 COMPLETIONS_MODEL = "text-davinci-003"
+# temperature = TEMPERATURE,
+# max_tokens = MAX_TOKENS,
+# top_p = MODEL_TOP_P,
+# frequency_penalty = FREQUENCY_PENALTY,
+# presence_penalty = PRESENCE_PENALTY,
+
+TEMPERATURE = 0.5
+MAX_TOKENS = 100
+MODEL_TOP_P = 1
+FREQUENCY_PENALTY = 0.0
+PRESENCE_PENALTY = 0.0
 EMBEDDINGS_MODEL = "text-embedding-ada-002"
+
+CONITNUE_TRAINING = True
 SKIP_TRAINING = False
+_SKIP_LOOP = False
 ASK_QUESTION = True
 #
 SKIP_DOWNLOAD_AND_TRANSCRIBE = False
@@ -72,7 +88,7 @@ if SKIP_EMBEDDINGS: SKIP_DOWNLOAD_AND_TRANSCRIBE = True  # ungainly
 # Check which values for skip are valid and set the correct values
 # openai.api_key = getpass("Enter your OpenAI API Key")
 openai.api_key = "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"
-df = pd.read_csv(input_data_file)
+df = pd.read_csv(INPUT_DATA_FILE_NAME)
 print(f'{df = }')
 
 # Set names for dirs and file locations
@@ -84,7 +100,7 @@ INPUT_DIR_FOR_EPISODES_WITH_CONTEXT = 'episodes_w_context'
 PREFIX_FOR_EPISODES_WITH_CONTEXT = 'question_w_context'
 OUTPUT_FILE_FOR_EPISODES_WITH_CONTEXT = 'questions_w_context.csv'
 #
-TEMP_DIR_FOR_TRANSCRIPTION = 'transcription'
+TEMP_DIR_FOR_TRANSCRIPTION = 'transcriptions'
 TEMP_PREFIX_FOR_TRANSCRIPTION = 'transcription'
 
 
@@ -105,84 +121,117 @@ def get_question_context(row):
 
 # Read in all the episodes with context and embeddings and save to a single csv file for training the model on
 
+episodes_list = df['episode'].unique() if N_EPISODES > 0 else df['episode'].unique()[:N_EPISODES]
 
 if not SKIP_TRAINING:
-    episodes_list = df['episode'].unique() if N_EPISODES > 0 else df['episode'].unique()[:N_EPISODES]
 
-    for episode in episodes_list:
-        print(f'{episode = }')
+    if CONITNUE_TRAINING:
+        import glob
+        import re
 
-        if not SKIP_DOWNLOAD_AND_TRANSCRIBE:
-            # Get rows for episode
-            episode_df = df[df['episode'] == episode].copy()
-            print(f'{episode_df = }')
+        # Get all files in the dir
+        files = glob.glob(f'{INPUT_DIR_FOR_EPISODES_WITH_CONTEXT_AND_EMBEDDINGS}/*')
+        # Get all the episode numbers from the files
+        episodes_with_context_n_embedding = [int(re.findall(r'\d+', file)[0]) for file in files]
+        # Get the episodes that are not in the list
+        episodes_list_to_add = list(set(episodes_list) - set(episodes_with_context_n_embedding))
+        episodes_list_to_add.sort()
 
-            # Download audio from YouTube for episode
-            # ['_age_restricted', '_author', '_embed_html', '_fmt_streams', '_initial_data', '_js', '_js_url', '_metadata',
-            # '_player_config_args', '_publish_date', '_title', '_vid_info', '_watch_html', 'age_restricted',
-            # 'allow_oauth_cache', 'author', 'bypass_age_gate', 'caption_tracks', 'captions', 'channel_id', 'channel_url',
-            # 'check_availability', 'description', 'embed_html', 'embed_url', 'fmt_streams', 'from_id', 'initial_data', 'js',
-            # 'js_url', 'keywords', 'length', 'metadata', 'publish_date', 'rating', 'register_on_complete_callback',
-            # 'register_on_progress_callback', 'stream_monostate', 'streaming_data', 'streams', 'thumbnail_url', 'title',
-            # 'use_oauth', 'vid_info', 'video_id', 'views', 'watch_html', 'watch_url']
-            youtube_video_url = episode_df['url'].iloc[0]  # assume all urls are the same for the episode
-            youtube_video = YouTube(youtube_video_url)
-            stream = youtube_video.streams.filter(only_audio=True).first()
-            stream.download(filename=f'{TEMP_PREFIX_FOR_TRANSCRIPTION}_{episode}.mp4')
-            print(f'{youtube_video.description = }')
+        # Get the last episode number
+        last_episode = max(episodes_with_context_n_embedding)
 
-            # Transcribe audio
-            print("Transcribing audio...")
-            model = whisper.load_model('base')
-            transcription_output = model.transcribe(f'{TEMP_PREFIX_FOR_TRANSCRIPTION}_{episode}.mp4')
-            print(f"{transcription_output['text'] = }")
+        # Get the last file
+        print(f'{last_episode = } {len(episodes_list) = }')
 
-            # Get context for each question
-            print("Getting question context...")
-            episode_df['context'] = episode_df.apply(get_question_context, axis=1)
-            episode_df.to_csv(f'{INPUT_DIR_FOR_EPISODES_WITH_CONTEXT}/{PREFIX_FOR_EPISODES_WITH_CONTEXT}_{episode}.csv')
+        if last_episode >= len(episodes_list):
+            print(f'{episodes_list_to_add = }')
+            print(f'{last_episode = } {len(episodes_list) = }')
+            print("Looks like you have already processed all the episodes in input data.")
+            SKIP_TRAINING = True
         else:
-            # Read in the episode with context
-            episode_df = pd.read_csv(
-                f'{INPUT_DIR_FOR_EPISODES_WITH_CONTEXT}/{PREFIX_FOR_EPISODES_WITH_CONTEXT}_{episode}.csv')
+            index = episodes_list_to_add.index(last_episode)
+            episodes_list = episodes_list[episodes_list_to_add.index(last_episode):]
 
-        if not SKIP_EMBEDDINGS:
-            # Get embeddings for each question
-            episode_df['embedding'] = episode_df['context'].apply(
-                lambda row: get_embedding(row, engine=EMBEDDINGS_MODEL))
-            episode_df.to_csv(
-                f'{INPUT_DIR_FOR_EPISODES_WITH_CONTEXT_AND_EMBEDDINGS}/{PREFIX_FOR_EPISODES_WITH_CONTEXT_AND_EMBEDDINGS}_{episode}.csv')
-        else:
-            # Read in the episode with context and embeddings
-            episode_df = pd.read_csv(
-                f'{INPUT_DIR_FOR_EPISODES_WITH_CONTEXT_AND_EMBEDDINGS}/{PREFIX_FOR_EPISODES_WITH_CONTEXT_AND_EMBEDDINGS}_{episode}.csv')
-
-    # Delete the audio file
     try:
-        import os
+        if not SKIP_TRAINING:
+            for episode in episodes_list:
+                if last_episode > len(episodes_list):
+                    print(f'You have already processed all the episodes in input data.')
+                    break
+                else:
+                    print(f'{episode = }')
+                if not SKIP_DOWNLOAD_AND_TRANSCRIBE:
+                    # Get rows for episode
+                    episode_df = df[df['episode'] == episode].copy()
+                    print(f'{episode_df = }')
 
-        os.remove('temp_financial_advisor.mp4')
-    except:
-        pass
+                    # Download audio from YouTube for episode
+                    # ['_age_restricted', '_author', '_embed_html', '_fmt_streams', '_initial_data', '_js', '_js_url', '_metadata',
+                    # '_player_config_args', '_publish_date', '_title', '_vid_info', '_watch_html', 'age_restricted',
+                    # 'allow_oauth_cache', 'author', 'bypass_age_gate', 'caption_tracks', 'captions', 'channel_id', 'channel_url',
+                    # 'check_availability', 'description', 'embed_html', 'embed_url', 'fmt_streams', 'from_id', 'initial_data', 'js',
+                    # 'js_url', 'keywords', 'length', 'metadata', 'publish_date', 'rating', 'register_on_complete_callback',
+                    # 'register_on_progress_callback', 'stream_monostate', 'streaming_data', 'streams', 'thumbnail_url', 'title',
+                    # 'use_oauth', 'vid_info', 'video_id', 'views', 'watch_html', 'watch_url']
+                    youtube_video_url = episode_df['url'].iloc[0]  # assume all urls are the same for the episode
+                    youtube_video = YouTube(youtube_video_url)
+                    stream = youtube_video.streams.filter(only_audio=True).first()
+                    stream.download(
+                        filename=f'{TEMP_DIR_FOR_TRANSCRIPTION}/{TEMP_PREFIX_FOR_TRANSCRIPTION}_{episode}.mp4')
+                    print(f'{youtube_video.description = }')
 
-    # combine all the episodes into a single csv file questions_w_context_n_embedding.csv
-    combine_episodes(
-        input_dir=INPUT_DIR_FOR_EPISODES_WITH_CONTEXT_AND_EMBEDDINGS,
-        prefix=PREFIX_FOR_EPISODES_WITH_CONTEXT_AND_EMBEDDINGS,
-        output_file=OUTPUT_FILE_FOR_EPISODES_WITH_CONTEXT_AND_EMBEDDINGS)
+                    # Transcribe audio
+                    print("Transcribing audio...")
+                    model = whisper.load_model('base')
+                    transcription_output = model.transcribe(
+                        f'{TEMP_DIR_FOR_TRANSCRIPTION}/{TEMP_PREFIX_FOR_TRANSCRIPTION}_{episode}.mp4')
+                    print(f"{transcription_output['text'] = }")
+
+                    # Get context for each question
+                    print("Getting question context...")
+                    episode_df['context'] = episode_df.apply(get_question_context, axis=1)
+                    episode_df.to_csv(
+                        f'{INPUT_DIR_FOR_EPISODES_WITH_CONTEXT}/{PREFIX_FOR_EPISODES_WITH_CONTEXT}_{episode}.csv')
+                else:
+                    # Read in the episode with context
+                    episode_df = pd.read_csv(
+                        f'{INPUT_DIR_FOR_EPISODES_WITH_CONTEXT}/{PREFIX_FOR_EPISODES_WITH_CONTEXT}_{episode}.csv')
+
+                if not SKIP_EMBEDDINGS:
+                    # Get embeddings for each question
+                    episode_df['embedding'] = episode_df['context'].apply(
+                        lambda row: get_embedding(row, engine=EMBEDDINGS_MODEL))
+                    episode_df.to_csv(
+                        f'{INPUT_DIR_FOR_EPISODES_WITH_CONTEXT_AND_EMBEDDINGS}/{PREFIX_FOR_EPISODES_WITH_CONTEXT_AND_EMBEDDINGS}_{episode}.csv')
+                else:
+                    # Read in the episode with context and embeddings
+                    episode_df = pd.read_csv(
+                        f'{INPUT_DIR_FOR_EPISODES_WITH_CONTEXT_AND_EMBEDDINGS}/{PREFIX_FOR_EPISODES_WITH_CONTEXT_AND_EMBEDDINGS}_{episode}.csv')
+
+            # combine all the episodes into a single csv file questions_w_context_n_embedding.csv
+            combine_episodes(
+                input_dir=INPUT_DIR_FOR_EPISODES_WITH_CONTEXT_AND_EMBEDDINGS,
+                prefix=PREFIX_FOR_EPISODES_WITH_CONTEXT_AND_EMBEDDINGS,
+                output_file=OUTPUT_FILE_FOR_EPISODES_WITH_CONTEXT_AND_EMBEDDINGS)
+        else:
+            episode_df = pd.read_csv(OUTPUT_FILE_FOR_EPISODES_WITH_CONTEXT_AND_EMBEDDINGS)
+
+    except ValueError:
+        # exit("Looks like you have already processed all the episodes in input data.")
+        print("Looks like you have already processed all the episodes in input data.")
 else:
     episode_df = pd.read_csv(OUTPUT_FILE_FOR_EPISODES_WITH_CONTEXT_AND_EMBEDDINGS)
 
 if ASK_QUESTION:
     completion = ask_question(episode_df=episode_df, pre_context_prompt=pre_context_prompt, question=question,
-                              top_n_context=top_n_context,
+                              top_n_context=TOP_N_CONTEXT,
                               completion_model=COMPLETIONS_MODEL,
                               embedding_model=EMBEDDINGS_MODEL,
-                              temperature=1,
-                              max_tokens=500,
-                              top_p=1,
-                              frequency_penalty=0,
-                              presence_penalty=0,
+                              temperature=TEMPERATURE,
+                              max_tokens=MAX_TOKENS,
+                              top_p=MODEL_TOP_P,
+                              frequency_penalty=FREQUENCY_PENALTY,
+                              presence_penalty=PRESENCE_PENALTY,
                               )
 
     print(f'{question = }')

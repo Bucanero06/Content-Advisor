@@ -1,7 +1,35 @@
 # -*- coding: utf-8 -*-
-# todo - suggestions of better context for the question
-# todo - use pretrained models for a more robust solution both for the embeddings and the completions
-# todo - move from script to a web app
+# todo
+#  - suggestions of better context for the question
+#  - use pretrained models for a more robust solution both for the embeddings and the completions
+#  - move from script to a web app
+#  - relies on data preparation modules which should be chosen based on the data type itself
+#     - Input Models
+#       - youtube module
+#       - google speech to text module
+#       - documentation reader module
+#       - live streams module
+#       - research papers module
+#     - Ensemble DB Schemes
+#       - Prompt engineering
+#       - Context choice
+#       - Tokenizer module
+#       - Context weighting for settings optimization and preparing any assisting data needed to answer the question
+#       - Question Engineering
+#     - Live Conversions
+#       - Live explaining/translation of stream
+#       - Live summarization of stream
+#       - Live question answering of stream
+#       - Live Actions based on stream
+
+# Not all these require either usage of embeddings or completion models. Modularity and speed are key,
+#   although the latter is not a priority at the moment. Proof of concept and demo creation is the priority.
+
+
+#  - move transicrion downloaded episodes into a folder and not in the root directory
+
+#  -
+import pprint
 
 import openai
 import whisper
@@ -14,12 +42,25 @@ from helper_functions import ask_question, is_part_of_question, combine_episodes
 pd.set_option('display.max_columns', None)
 
 pre_context_prompt = "Answer the following question using only the context below. Answer in the style of Ben Carlson a financial advisor and podcaster. If you don't know the answer for certain, say I don't know."
+
+"""
+Considerations when buying a new construction vs. an older home in an established neighborhood
+
+e.g.
+question = "Should I buy a house with cash?"
+...
+question = "Give me the best advice you have for someone who is just starting out in their career and has a nine week 
+                beautiful baby girl as a 25 year old woman"
+"""
+
 question = "Should I buy a house with cash?"
 
+top_n_context = 2
+N_EPISODES = -1
 COMPLETIONS_MODEL = "text-davinci-003"
 EMBEDDINGS_MODEL = "text-embedding-ada-002"
 SKIP_TRAINING = False
-ASK_QUESTION = False
+ASK_QUESTION = True
 #
 SKIP_DOWNLOAD_AND_TRANSCRIBE = False
 SKIP_EMBEDDINGS = False
@@ -64,7 +105,9 @@ def get_question_context(row):
 
 
 if not SKIP_TRAINING:
-    for episode in df['episode'].unique()[:1]:
+    episodes_list = df['episode'].unique() if N_EPISODES > 0 else df['episode'].unique()[:N_EPISODES]
+
+    for episode in episodes_list:
         print(f'{episode = }')
 
         if not SKIP_DOWNLOAD_AND_TRANSCRIBE:
@@ -129,12 +172,16 @@ else:
     episode_df = pd.read_csv(OUTPUT_FILE_FOR_EPISODES_WITH_CONTEXT_AND_EMBEDDINGS)
 
 if ASK_QUESTION:
-    ask_question(episode_df=episode_df, pre_context_prompt=pre_context_prompt, question=question,
-                 completion_model=COMPLETIONS_MODEL,
-                 embedding_model=EMBEDDINGS_MODEL,
-                 temperature=1,
-                 max_tokens=500,
-                 top_p=1,
-                 frequency_penalty=0,
-                 presence_penalty=0,
-                 )
+    completion = ask_question(episode_df=episode_df, pre_context_prompt=pre_context_prompt, question=question,
+                              top_n_context=top_n_context,
+                              completion_model=COMPLETIONS_MODEL,
+                              embedding_model=EMBEDDINGS_MODEL,
+                              temperature=1,
+                              max_tokens=500,
+                              top_p=1,
+                              frequency_penalty=0,
+                              presence_penalty=0,
+                              )
+
+    print(f'{question = }')
+    pprint.pprint(completion)

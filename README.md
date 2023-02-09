@@ -40,4 +40,4 @@
 #       - Live Actions based on stream
 #   Not all these require either usage of embeddings or completion models. Modularity and speed are key,
 #       although the latter is not a priority at the moment. Proof of concept and demo creation is the priority.
-a priority at the moment. Proof of concept and demo creation is the priority.
+#       a priority at the moment. Proof of concept and demo creation is the priority.

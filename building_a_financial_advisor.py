@@ -5,12 +5,16 @@
 #  - move from script to a web app
 #  - add description of channel, etc... in the prompt
 #  - add a way to add more context to the prompt in a more interactive way like a conversation
+#  - sort the context by similarity and recentness, search web for more context
 #  - relies on data preparation modules which should be chosen based on the data type itself
 #     - Input Models
 #       - youtube module
 #       - google speech to text module
 #       - documentation reader module
 #       - live streams module
+#       - podcast module
+#       - books module
+#       - articles module
 #       - research papers module
 #     - Ensemble DB Schemes
 #       - Prompt engineering
@@ -69,7 +73,7 @@ COMPLETIONS_MODEL = "text-davinci-003"
 # presence_penalty = PRESENCE_PENALTY,
 
 TEMPERATURE = 0.5
-MAX_TOKENS = 100
+MAX_TOKENS = 500
 MODEL_TOP_P = 1
 FREQUENCY_PENALTY = 0.0
 PRESENCE_PENALTY = 0.0

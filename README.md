@@ -1,6 +1,8 @@
 # SNIP form "building_a_financial_advisor" example 
 # -*- coding: utf-8 -*-
 # todo
+#   The current name of the repo is "Financial Advisor" but it should be changed to something more general, thats just the 
+#       current example to get us started
 #   I'll be opening issues for these and posting collaboration instructions soon, feel free at the assist in any way you
 #       can, simply remember to create a new fork and follow common git practices for the time being. DO-NOT delete works
 #       of others!!! instead contribute in modules and create a pull request.

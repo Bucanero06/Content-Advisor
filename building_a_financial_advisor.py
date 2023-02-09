@@ -3,6 +3,7 @@
 #  - suggestions of better context for the question
 #  - use pretrained models for a more robust solution both for the embeddings and the completions
 #  - move from script to a web app
+#  - add description of channel, etc... in the prompt
 #  - relies on data preparation modules which should be chosen based on the data type itself
 #     - Input Models
 #       - youtube module
@@ -55,6 +56,7 @@ question = "Give me the best advice you have for someone who is just starting ou
 
 question = "Should I buy a house with cash?"
 
+input_data_file = 'example_questions_dataset.csv'
 top_n_context = 2
 N_EPISODES = -1
 COMPLETIONS_MODEL = "text-davinci-003"
@@ -70,7 +72,7 @@ if SKIP_EMBEDDINGS: SKIP_DOWNLOAD_AND_TRANSCRIBE = True  # ungainly
 # Check which values for skip are valid and set the correct values
 # openai.api_key = getpass("Enter your OpenAI API Key")
 openai.api_key = "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"
-df = pd.read_csv('questions.csv')
+df = pd.read_csv(input_data_file)
 print(f'{df = }')
 
 # Set names for dirs and file locations

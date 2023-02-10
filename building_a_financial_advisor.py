@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+
 # todo
 #   The current name of the repo is "Financial Advisor" but it should be changed to something more general, thats just the
 #       current example to get us started
@@ -100,8 +101,7 @@ SKIP_EMBEDDINGS = False
 if SKIP_EMBEDDINGS: SKIP_DOWNLOAD_AND_TRANSCRIBE = True  # ungainly
 
 # Check which values for skip are valid and set the correct values
-# openai.api_key = getpass("Enter your OpenAI API Key")
-openai.api_key = "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"
+openai.api_key = getpass("Enter your OpenAI API Key")
 df = pd.read_csv(INPUT_DATA_FILE_NAME)
 print(f'{df = }')
 
@@ -136,6 +136,17 @@ def get_question_context(row):
 # Read in all the episodes with context and embeddings and save to a single csv file for training the model on
 
 episodes_list = df['episode'].unique() if N_EPISODES > 0 else df['episode'].unique()[:N_EPISODES]
+
+#create directories if they don't exist
+import os
+if not os.path.exists(INPUT_DIR_FOR_EPISODES_WITH_CONTEXT_AND_EMBEDDINGS):
+    os.makedirs(INPUT_DIR_FOR_EPISODES_WITH_CONTEXT_AND_EMBEDDINGS)
+if not os.path.exists(INPUT_DIR_FOR_EPISODES_WITH_CONTEXT):
+    os.makedirs(INPUT_DIR_FOR_EPISODES_WITH_CONTEXT)
+if not os.path.exists(TEMP_DIR_FOR_TRANSCRIPTION):
+    os.makedirs(TEMP_DIR_FOR_TRANSCRIPTION)
+
+
 
 if not SKIP_TRAINING:
 
@@ -237,6 +248,7 @@ else:
     episode_df = pd.read_csv(OUTPUT_FILE_FOR_EPISODES_WITH_CONTEXT_AND_EMBEDDINGS)
 
 if ASK_QUESTION:
+
     completion = ask_question(episode_df=episode_df, pre_context_prompt=pre_context_prompt, question=question,
                               top_n_context=TOP_N_CONTEXT,
                               completion_model=COMPLETIONS_MODEL,

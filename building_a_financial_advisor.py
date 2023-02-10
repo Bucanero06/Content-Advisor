@@ -69,7 +69,7 @@ question = "Give me the best advice you have for someone who is just starting ou
                 beautiful baby girl as a 25 year old woman"
 """
 
-question = "Buying a car vs leasing a car, pros and cons"
+question = "What do you think about leasing a car now with the high interest rate environment we are currently in and whether the residual values/incentives are worth it? Please explain in detail why you think this way to a 25 year old"
 
 INPUT_DATA_FILE_NAME = 'example_questions_dataset.csv'
 TOP_N_CONTEXT = 2

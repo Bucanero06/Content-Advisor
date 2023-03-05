@@ -145,14 +145,15 @@ def ask_question(episode_df, pre_context_prompt, question, top_n_context=4,
     # Q: {question}
     # A:"""
 
-    prompt = f"""{pre_context_prompt}
+    # prompt = f"""{pre_context_prompt}
+    #
+    # Context:
+    # {context}
+    #
+    # Q: {question}
+    # A:"""
 
-    Context:
-    {context}
-
-    Q: {question}
-    A:"""
-
+    prompt = f"""{pre_context_prompt} Q: {question} A:"""
     print(f'{prompt = }')
 
     import openai

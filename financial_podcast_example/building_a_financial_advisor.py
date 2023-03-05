@@ -58,7 +58,8 @@ from helper_functions import ask_question, is_part_of_question, combine_episodes
 
 pd.set_option('display.max_columns', None)
 
-pre_context_prompt = "Answer the following question using only the context below. Answer in the style of Ben Carlson a financial advisor and podcaster. If you don't know the answer for certain, say I don't know."
+# pre_context_prompt = "Answer the following question using only the context below. Answer in the style of Ben Carlson a financial advisor and podcaster. If you don't know the answer for certain, say I don't know."
+pre_context_prompt = "Welcome to the Carbonyl Podcast, a show dedicated to answering viewer questions. Lets dive into the first question which will be answered by our celebrity guest, the one and only Snoopdog! Take it away:"
 
 """
 Considerations when buying a new construction vs. an older home in an established neighborhood
@@ -69,26 +70,23 @@ question = "Should I buy a house with cash?"
 question = "Give me the best advice you have for someone who is just starting out in their career and has a nine week 
                 beautiful baby girl as a 25 year old woman"
 """
+question = "Blog about: how to be a millionaire by 30"
 
-question = "What do you think about leasing a car now with the high interest rate environment we are currently in and whether the residual values/incentives are worth it? Please explain in detail why you think this way to a 25 year old"
-
-INPUT_DATA_FILE_NAME = 'example_questions_dataset.csv'
+INPUT_DATA_FILE_NAME = 'example_questions_dat aset.csv'
 TOP_N_CONTEXT = 2
 
 N_EPISODES = -1
-COMPLETIONS_MODEL = "text-davinci-003"
-# temperature = TEMPERATURE,
-# max_tokens = MAX_TOKENS,
-# top_p = MODEL_TOP_P,
-# frequency_penalty = FREQUENCY_PENALTY,
-# presence_penalty = PRESENCE_PENALTY,
+# COMPLETIONS_MODEL = "text-davinci-003"
+# COMPLETIONS_MODEL = "davinci:ft-carbonyl-llc-2023-02-10-04-20-07"
+# COMPLETIONS_MODEL = ""
+EMBEDDINGS_MODEL = "text-embedding-ada-002"
 
 TEMPERATURE = 0.5
-MAX_TOKENS = 500
+MAX_TOKENS = 1500
 MODEL_TOP_P = 1
-FREQUENCY_PENALTY = 0.0
+FREQUENCY_PENALTY = 0.5
 PRESENCE_PENALTY = 0.0
-EMBEDDINGS_MODEL = "text-embedding-ada-002"
+
 
 CONITNUE_TRAINING = True
 SKIP_TRAINING = False
@@ -101,7 +99,9 @@ SKIP_EMBEDDINGS = False
 if SKIP_EMBEDDINGS: SKIP_DOWNLOAD_AND_TRANSCRIBE = True  # ungainly
 
 # Check which values for skip are valid and set the correct values
-openai.api_key = getpass("Enter your OpenAI API Key")
+# openai.api_key = getpass("Enter your OpenAI API Key")
+openai.api_key = "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"
+
 df = pd.read_csv(INPUT_DATA_FILE_NAME)
 print(f'{df = }')
 

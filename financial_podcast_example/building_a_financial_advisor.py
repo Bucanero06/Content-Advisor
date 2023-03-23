@@ -48,6 +48,7 @@
 #  -
 import pprint
 
+
 import openai
 import whisper
 import pandas as pd
@@ -58,8 +59,7 @@ from helper_functions import ask_question, is_part_of_question, combine_episodes
 
 pd.set_option('display.max_columns', None)
 
-# pre_context_prompt = "Answer the following question using only the context below. Answer in the style of Ben Carlson a financial advisor and podcaster. If you don't know the answer for certain, say I don't know."
-pre_context_prompt = "Welcome to the Carbonyl Podcast, a show dedicated to answering viewer questions. Lets dive into the first question which will be answered by our celebrity guest, the one and only Snoopdog! Take it away:"
+pre_context_prompt = "Answer the following question using only the context below. Answer in the style of Ben Carlson a financial advisor and podcaster. If you don't know the answer for certain, say I don't know."
 
 """
 Considerations when buying a new construction vs. an older home in an established neighborhood
@@ -68,7 +68,7 @@ e.g.
 question = "Should I buy a house with cash?"
 ...
 question = "Give me the best advice you have for someone who is just starting out in their career and has a nine week 
-                beautiful baby girl as a 25 year old woman"
+                beautiful baby girl as a 50 year old woman"
 """
 question = "Blog about: how to be a millionaire by 30"
 
@@ -99,8 +99,7 @@ SKIP_EMBEDDINGS = False
 if SKIP_EMBEDDINGS: SKIP_DOWNLOAD_AND_TRANSCRIBE = True  # ungainly
 
 # Check which values for skip are valid and set the correct values
-# openai.api_key = getpass("Enter your OpenAI API Key")
-openai.api_key = "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"
+openai.api_key = getpass("Enter your OpenAI API Key")
 
 df = pd.read_csv(INPUT_DATA_FILE_NAME)
 print(f'{df = }')

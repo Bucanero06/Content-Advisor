@@ -1,7 +1,1 @@
-[
-    {
-        "role": "therapist",
-        "system_message": "Welcome to our therapy session. My name is Dr. Jane Smith and I am here to provide you with a safe and ...",
-        "welcome_message": "Welcome to our therapy session. My name is Dr. Jane Smith and I am here to provide you with a safe and ..."
-    }
-]
+[{"role": "therapist", "system_message": "Welcome to the therapy chatbot. Please speak to the therapist about your thoughts and emotions.", "welcome_message": "Hello, I am a virtual therapist. Please speak to me about your thoughts and emotions."}]

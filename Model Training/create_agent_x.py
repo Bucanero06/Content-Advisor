@@ -17,43 +17,10 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 
-def transcribe(self, audio):
-    """
-    Transcribes an audio input and generates a chat transcript with the assistant's response.
-
-    Args:
-        self: An instance of the Agent class.
-        audio: A file path to the audio input.
-
-    Returns:
-        A string containing the chat transcript.
-    """
-    if not audio:
-        return "Error: No audio input received."
-
-    audio_file = open(audio, "rb")
-    transcript = openai.Audio.transcribe("whisper-1", audio_file)
-
-    if not transcript["text"]:
-        return "Error: Unable to transcribe audio input."
-
-    self.messages.append({"role": "user", "content": transcript["text"]})
-
-    print(self.messages)
-    response = openai.ChatCompletion.create(model="gpt-3.5-turbo", messages=self.messages)
-
-    system_message = response["choices"][0]["message"]
-    self.messages.append(system_message)
-
-    chat_transcript = ""
-    for message in self.messages:
-        if message['role'] != 'system':
-            chat_transcript += message['role'] + ": " + message['content'] + "\n\n"
-
-    return chat_transcript
 
 
-def launch_gradio(agent):
+
+def init_and_launch_gradio(agent):
     """
     Launches a Gradio interface for the chatbot.
 
@@ -64,8 +31,8 @@ def launch_gradio(agent):
         fn=agent.transcribe,
         inputs=gr.Audio(source="microphone", type="filepath"),
         outputs="text",
-        title="Therapy Chatbot",
-        description="Speak to a virtual therapist about your thoughts and emotions.",
+        title=agent.role_info["role"],
+        description=agent.role_info["description"],
     ).launch()
 
 
@@ -262,6 +229,41 @@ class Agent:
             ) if not formatted_messages else formatted_messages,
         )
 
+    def transcribe(self, audio):
+        """
+        Transcribes an audio input and generates a chat transcript with the assistant's response.
+
+        Args:
+            self: An instance of the Agent class.
+            audio: A file path to the audio input.
+
+        Returns:
+            A string containing the chat transcript.
+        """
+        if not audio:
+            return "Error: No audio input received."
+
+        audio_file = open(audio, "rb")
+        transcript = openai.Audio.transcribe("whisper-1", audio_file)
+
+        if not transcript["text"]:
+            return "Error: Unable to transcribe audio input."
+
+        self.messages.append({"role": "user", "content": transcript["text"]})
+
+        print(self.messages)
+        response = openai.ChatCompletion.create(model="gpt-3.5-turbo", messages=self.messages)
+
+        system_message = response["choices"][0]["message"]
+        self.messages.append(system_message)
+
+        chat_transcript = ""
+        for message in self.messages:
+            if message['role'] != 'system':
+                chat_transcript += message['role'] + ": " + message['content'] + "\n\n"
+
+        return chat_transcript
+
     def resolve_existing_role_info(self,
                                    role,
                                    description=None,
@@ -422,7 +424,7 @@ class Agent:
 
 
 if __name__ == "__main__":
-    LOAD_ROLE = False
+    LOAD_ROLE = True
 
     # todo update this module
     therapist_agent = Agent()
@@ -449,4 +451,4 @@ if __name__ == "__main__":
         )
 
     print(f'{therapist_agent.role_info = }')
-    # launch_gradio(therapist_agent)
+    init_and_launch_gradio(therapist_agent)

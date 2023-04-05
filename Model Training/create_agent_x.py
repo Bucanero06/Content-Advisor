@@ -17,9 +17,6 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 
-
-
-
 def init_and_launch_gradio(agent):
     """
     Launches a Gradio interface for the chatbot.
@@ -421,6 +418,10 @@ class Agent:
 
         if kwargs.get("load_role_after_creating_it", False): self.load_role(role=role)
         return self.role_info
+
+    # todo need to add interact method to act as an input out handler for the agent. Needs to be flexible enough to accept transcription, chat_completion, and text to speech for both AI-User and AI-AI interactions
+    #   Means needs to have various types of connections to the user and other agents
+    #   Need to think about this one more
 
 
 if __name__ == "__main__":

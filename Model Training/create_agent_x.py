@@ -17,7 +17,7 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 
-def init_and_launch_gradio(agent):
+def init_and_launch_gradio_interface(agent):
     """
     Launches a Gradio interface for the chatbot.
 
@@ -25,7 +25,7 @@ def init_and_launch_gradio(agent):
         agent: An instance of the Agent class.
     """
     ui = gr.Interface(
-        fn=agent.transcribe,
+        fn=agent.transcribe_and_respond,
         inputs=gr.Audio(source="microphone", type="filepath"),
         outputs="text",
         title=agent.role_info["role"],
@@ -67,6 +67,8 @@ class Agent:
         """
         self.role_info = None
         self.messages = None
+
+        self.engine_name = "gpt-3.5-turbo"  # or "gpt-4"
 
     def load_role(self, role):
         """
@@ -226,7 +228,29 @@ class Agent:
             ) if not formatted_messages else formatted_messages,
         )
 
-    def transcribe(self, audio):
+    def respond_in_continued_conversation(self, input_message, model=None):
+        if not input_message:
+            return "Error: Unable to transcribe audio input."
+
+        if not model:
+            model = self.engine_name
+
+        self.messages.append({"role": "user", "content": input_message})
+
+        # response = openai.ChatCompletion.create(model=model, messages=self.messages)
+        response = self.complete(model=model, formatted_messages=self.messages)
+
+        system_message = response["choices"][0]["message"]
+        self.messages.append(system_message)
+
+        chat_transcript = ""
+        for message in self.messages:
+            if message['role'] != 'system':
+                chat_transcript += message['role'] + ": " + message['content'] + "\n\n"
+
+        return chat_transcript
+
+    def transcribe_and_respond(self, audio):
         """
         Transcribes an audio input and generates a chat transcript with the assistant's response.
 
@@ -243,22 +267,8 @@ class Agent:
         audio_file = open(audio, "rb")
         transcript = openai.Audio.transcribe("whisper-1", audio_file)
 
-        if not transcript["text"]:
-            return "Error: Unable to transcribe audio input."
-
-        self.messages.append({"role": "user", "content": transcript["text"]})
-
-        print(self.messages)
-        response = openai.ChatCompletion.create(model="gpt-3.5-turbo", messages=self.messages)
-
-        system_message = response["choices"][0]["message"]
-        self.messages.append(system_message)
-
-        chat_transcript = ""
-        for message in self.messages:
-            if message['role'] != 'system':
-                chat_transcript += message['role'] + ": " + message['content'] + "\n\n"
-
+        chat_transcript = self.respond_in_continued_conversation(input_message=transcript["text"],
+                                                                 model=self.engine_name)
         return chat_transcript
 
     def resolve_existing_role_info(self,
@@ -408,15 +418,18 @@ class Agent:
         else:
             print("Since we are creating a new agent role we are going to use the provided "
                   "information to fill in the blanks of those settings which were not provide")
-            assert role, "Role name is required"
             self.update_role_info_agent_class_attribute(role, description, system_message, intro_message)
+            # Ensure at least one value in the role_info attribute is not None
+            assert any(self.role_info.values()), ValueError(
+                "No context available. Please provide at least one value for the role_info attribute.")
+
             assert self.role_info["role"] not in available_roles, "Role exists ... error handling didnt catch this"
 
         if kwargs.get("auto_fill_missing_info", False): self.fill_role_info_attribute_based_on_context(**kwargs)
-        available_roles[role] = self.role_info
+        available_roles[self.role_info["role"]] = self.role_info
         self.write_json_to_agent_roles_path(agent_roles_path=agent_roles_path, available_roles=available_roles)
 
-        if kwargs.get("load_role_after_creating_it", False): self.load_role(role=role)
+        if kwargs.get("load_role_after_creating_it", False): self.load_role(role=self.role_info["role"])
         return self.role_info
 
     # todo need to add interact method to act as an input out handler for the agent. Needs to be flexible enough to accept transcription, chat_completion, and text to speech for both AI-User and AI-AI interactions
@@ -425,7 +438,7 @@ class Agent:
 
 
 if __name__ == "__main__":
-    LOAD_ROLE = True
+    LOAD_ROLE = False
 
     # todo update this module
     therapist_agent = Agent()
@@ -433,15 +446,17 @@ if __name__ == "__main__":
         therapist_agent.load_role(role="Therapy Chatbot")
     else:
         therapist_agent.create_agent_role(
-            role="Therapy Chatbot",
+            # need to add a small dialog here for feedback and permission to improve on the given inputs
+            role=None,
             # description="A therapist that listens to your thoughts and emotions.",
-            description=None,
+            description="Senior Developer's First day at work",
             system_message=None,
             intro_message=None,
             #
             **dict(
                 agent_roles_path="roles.json",
                 #
+                # fixme Current issue is that if did not provide a role and the generated one based on the context is the same as one already present, well ... itll overwrite it. I beleive a method present can make that painless to fix
                 auto_fill_missing_info=True,
                 auto_fill_missing_info_model="gpt-3.5-turbo",
                 #
@@ -452,4 +467,7 @@ if __name__ == "__main__":
         )
 
     print(f'{therapist_agent.role_info = }')
-    init_and_launch_gradio(therapist_agent)
+    init_and_launch_gradio_interface(therapist_agent)
+
+    # todo need to add interact method to act as an input out handler for the agent. Needs to be flexible enough to accept transcription, chat_completion, and text to speech for both AI-User and AI-AI interactions
+    #   Means needs to have various types of connections to the user and other agents

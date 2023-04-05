@@ -17,7 +17,7 @@
 #  - relies on data preparation modules which should be chosen based on the data type itself
 #     - Input Models
 #       - youtube module
-#       - "finBERT" model for financial text classification and sentiment analysis of financial news
+#       - "finBERT" engine_name for financial text classification and sentiment analysis of financial news
 #       - Read financial reports module (10-K, 10-Q, 8-K, etc...) and extract context using NLP
 #                                                                               (base models already exist)
 #       - google speech to text module
@@ -132,7 +132,7 @@ def get_question_context(row):
     return context
 
 
-# Read in all the episodes with context and embeddings and save to a single csv file for training the model on
+# Read in all the episodes with context and embeddings and save to a single csv file for training the engine_name on
 
 episodes_list = df['episode'].unique() if N_EPISODES > 0 else df['episode'].unique()[:N_EPISODES]
 

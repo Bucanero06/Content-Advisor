@@ -23,11 +23,11 @@ df.to_csv("questions_w_context_n_embedding_training.csv")
 
 
 print("Data saved to file")
-# After you’ve fine-tuned a model, remember that your prompt has to end with the indicator string ` ->` for the model to start generating completions, rather than continuing with the prompt. Make sure to include `stop=["\n"]` so that the generated texts ends at the expected place.
-# Once your model starts training, it'll approximately take 15.24 minutes to train a `curie` model, and less for `ada` and `babbage`. Queue will approximately take half an hour per job ahead of you.
+# After you’ve fine-tuned a engine_name, remember that your prompt has to end with the indicator string ` ->` for the engine_name to start generating completions, rather than continuing with the prompt. Make sure to include `stop=["\n"]` so that the generated texts ends at the expected place.
+# Once your engine_name starts training, it'll approximately take 15.24 minutes to train a `curie` engine_name, and less for `ada` and `babbage`. Queue will approximately take half an hour per job ahead of you.
 
 exit()
-# Train the model
+# Train the engine_name
 response = openai.Completion.create(
     engine="davinci",
     prompt="",
@@ -41,7 +41,7 @@ response = openai.Completion.create(
 )
 
 # Print the training loss
-print(response["model"]["training_loss"])
+print(response["engine_name"]["training_loss"])
 
 
 

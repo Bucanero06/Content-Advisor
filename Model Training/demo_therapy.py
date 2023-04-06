@@ -96,3 +96,4 @@ for i in range(50):
 # todo or fixme perhps leaving spaces in prompt or output idk, might be wasting tokens
 # fixme needs to know when to either end a combo and send the task to the respective agents or how to do somme of
 #  the tasks itself e.g. if an agent gives it commands or if itself has a list of commands, do them and return them or if the agent expoecting the work can aslk for it, review it, test it etc ...
+#  meaning have to add ending values, a thrid part to activate , change messages if gets staled, check every n,  idk but you get the gist

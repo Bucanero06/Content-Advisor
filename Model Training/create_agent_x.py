@@ -29,10 +29,53 @@ def init_and_launch_gradio_interface(agent):
         inputs=gr.Audio(source="microphone", type="filepath"),
         outputs="text",
         title=agent.role_info["role"],
-        description=agent.role_info["description"],
+        # description=f"""{agent.role_info["description"]}\n\n{agent.role_info["intro_message"]}""",
+        description="""<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mental Health Counselor</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      line-height: 1.6;
+      margin: 0;
+      padding: 1rem;
+      background-color: #f4f4f4;
+    }
+    .container {
+      background-color: #fff;
+      padding: 2rem;
+      border-radius: 5px;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+    h1 {
+      margin-top: 0;
+      color: #333;
+    }
+    p {
+      color: #555;
+    }
+    .welcome-message {
+      font-style: italic;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <p>A Mental Health Counselor helps clients navigate their emotions and challenges by providing gentle guidance, active listening, motivation, and support.</p>
+    <p class="welcome-message">Hello and welcome! I’m here as your Mental Health Counselor to provide a compassionate and empathetic ear. Let’s talk about what’s on your mind, and together, we’ll navigate through your emotions and challenges. Remember, this is a safe space for you to share, and I’m here to support and guide you on your journey.</p>
+  </div>
+</body>
+</html>
+""",
     ).launch()
 
 
+#  # todo
+# <p>{agent.role_info["description"]}</p>
+# <p class="welcome-message">{agent.role_info["intro_message"]}</p>
 def initialize_messages(system_message=None, intro_assistant_message=None, intro_user_message=None):
     """
     Initializes a list of messages for a chatbot conversation.
@@ -230,24 +273,46 @@ class Agent:
         print(f'    {json.dumps(self.role_info, indent=4)}\n')
 
     def respond_in_continued_conversation(self, input_message, model=None):
+        """
+        Processes an input message within the context of a continued conversation using a language model.
+
+        Args:
+            input_message (str): The message from the user.
+            model (str, optional): The name of the language model to use. Defaults to the engine_name attribute.
+
+        Returns:
+            str: The chat transcript including messages from both the user and the AI.
+        """
+        # If there is no input message, return an error message
         if not input_message:
             return "Error: Unable to transcribe audio input."
 
+        # If no model is provided, use the default engine_name
         if not model:
             model = self.engine_name
 
+        # Append the user's message to the messages list
         self.messages.append({"role": "user", "content": input_message})
 
+        # Generate a response using the language model
+        # response = openai.ChatCompletion.create(model=model, messages=self.messages)
         response = self.complete(model=model, formatted_messages=self.messages)
 
+        # Extract the AI-generated message from the response
         system_message = response["choices"][0]["message"]
+
+        # Append the AI-generated message to the messages list
         self.messages.append(system_message)
 
+        # Initialize an empty chat transcript string
         chat_transcript = ""
+
+        # Iterate through the messages and concatenate them into the chat transcript
         for message in self.messages:
             if message['role'] != 'system':
                 chat_transcript += message['role'] + ": " + message['content'] + "\n\n"
 
+        # Return the chat transcript
         return chat_transcript
 
     def transcribe_and_respond(self, audio):
@@ -448,18 +513,19 @@ class Agent:
 
 
 if __name__ == "__main__":
-    LOAD_ROLE = False
+    LOAD_ROLE = True
 
     # todo update this module
     therapist_agent = Agent()
     if LOAD_ROLE:
-        therapist_agent.load_role(role="Therapy Chatbot")
+        therapist_agent.load_role(role="Mental Health Counselor")
     else:
         therapist_agent.create_agent_role(
             # need to add a small dialog here for feedback and permission to improve on the given inputs
             role=None,
             description=None,
-            system_message="You are a compassionate and empathetic mental health counselor. Your purpose is to provide gentle guidance to your clients, actively listen to them, and above all, to motivate and support them in their decisions. You are able to rationalize and interpret strong emotions and use reasoning when offering guidance. Do not give unsolicited advice or directions",
+            # system_message="You are a compassionate and empathetic mental health counselor. Your purpose is to provide gentle guidance to your clients, actively listen to them, and above all, to motivate and support them in their decisions. You are able to rationalize and interpret strong emotions and use reasoning when offering guidance. Do not give unsolicited advice or directions",
+            system_message=None,
             intro_message=None,
             #
             **dict(
@@ -476,8 +542,8 @@ if __name__ == "__main__":
             )
         )
 
-        print(f'{therapist_agent.role_info = }')
-        init_and_launch_gradio_interface(therapist_agent)
+    print(f'{therapist_agent.role_info = }')
+    init_and_launch_gradio_interface(therapist_agent)
 
-        # todo need to add interact method to act as an input out handler for the agent. Needs to be flexible enough to accept transcription, chat_completion, and text to speech for both AI-User and AI-AI interactions
-        #   Means needs to have various types of connections to the user and other agents
+    # todo need to add interact method to act as an input out handler for the agent. Needs to be flexible enough to accept transcription, chat_completion, and text to speech for both AI-User and AI-AI interactions
+    #   Means needs to have various types of connections to the user and other agents

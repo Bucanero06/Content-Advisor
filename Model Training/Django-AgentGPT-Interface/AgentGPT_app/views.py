@@ -1,12 +1,26 @@
 from django.shortcuts import render
 from django.http import JsonResponse
 import openai
+import sys
+import os
+# get the absolute path to the directory containing the module file
+module_dir = os.path.abspath('../')
 
+# add the directory to Python's search path
+sys.path.append(module_dir)
+
+# print the current directory to verify that the module directory has been added
+print("Current Directory:", sys.path)
+
+# import the module by its name
+from create_agent_x import Agent
 from CREDENTIALS_DO_NOT_PUSH import OPENAI_API_KEY
-# from create_agent_x_delete_this_copy import Agent
+
 
 openai.api_key = OPENAI_API_KEY
 ROLE="Dr. Therapist"
+
+
 
 def chat_view(request):
     if request.method == 'POST':

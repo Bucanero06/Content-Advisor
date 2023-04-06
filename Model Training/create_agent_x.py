@@ -131,6 +131,8 @@ class Agent:
 
         self.engine_name = engine_name  # e.g. "gpt-3.5-turbo" or "gpt-4"
 
+    '''Load Role & Create Role'''
+
     def load_role(self, role):
         """
        Loads the specified role and initializes the messages attribute.
@@ -143,7 +145,7 @@ class Agent:
        """
         assert role, "Please provide a role to be loaded."
 
-        self.role_info = self.get_agent_info(role)
+        self.role_info = self.get_agent_info(role=role, available_roles=self.load_available_roles())
 
         if not self.role_info:
             print("Role not found. Create a new one?")
@@ -161,7 +163,67 @@ class Agent:
                 intro_assistant_message=self.role_info["intro_message"]
             )
 
-    def get_agent_info(self, role):
+    def create_agent_role(self, role, short_name=None, description=None, system_message=None, intro_message=None,
+                          **kwargs):
+        """High level function to create a new agent role and handle all the necessary steps to take.
+
+        role: str
+            The name of the role to be created.
+        description: str
+            A short description of the role.
+        system_message: str
+            A message that will be used by the assistant to inform itself of its role.
+        intro_message: str
+            A message that will be sent to the user when they join the server.
+        **kwargs: dict
+            Any additional keyword arguments to pass to the function.
+            auto_fill_missing_info: bool (default: False)
+                If True, then the function will attempt to fill in any missing information with the OpenAI API.
+            default_action_to_resolve_existing_role_info: str (default: "n")
+                The default action to take if the user does not provide an input when asked to resolve an existing role.
+                Options are "o" for overwrite or "n" for enter a new name
+
+        Returns:
+            self.role_info: dict
+                A dictionary containing the role information that was just created.
+        """
+
+        available_roles = self.load_available_roles()
+        agent_roles_path = kwargs.get("agent_roles_path", "roles.json")
+
+        '''* Check if role is already made, if so then resolve_existing_role_name
+                or 
+            * If role does not exist, then create a new role. Else, ask user if they want to overwrite, 
+                pick a new name, or generate a new name based on the system and welcome messages.'''
+        if role in available_roles:
+            self.resolve_existing_role_info(role=role, short_name=short_name,
+                                            description=description, system_message=system_message,
+                                            intro_message=intro_message, **kwargs)
+
+        else:
+            print("Since we are creating a new agent role we are going to use the provided "
+                  "information to fill in the blanks of those settings which were not provide")
+            self.update_role_info_agent_class_attribute(role, short_name, description, system_message, intro_message)
+            # Ensure at least one value in the role_info attribute is not None
+            assert any(self.role_info.values()), ValueError(
+                "No context available. Please provide at least one value for the role_info attribute.")
+
+            assert self.role_info["role"] not in available_roles, "Role exists ... error handling didnt catch this"
+
+        if kwargs.get("auto_fill_missing_info", False): self.fill_role_info_attribute_based_on_context(**kwargs)
+        if kwargs.get("include_description_in_system_message", False):
+            self.role_info["system_message"] = f'{self.role_info["description"]} {self.role_info["system_message"]}'
+
+        available_roles[self.role_info["role"]] = self.role_info
+        self.write_json_to_agent_roles_path(agent_roles_path=agent_roles_path, available_roles=available_roles)
+
+        if kwargs.get("load_role_after_creating_it", False): self.load_role(role=self.role_info["role"])
+        return self.role_info
+
+    '''Static Methods'''
+
+    @staticmethod
+    def get_agent_info(role, available_roles):
         """
         Retrieves the role information from the available roles.
 
@@ -171,7 +233,7 @@ class Agent:
         Returns:
             dict: The role information if the role exists, otherwise None.
         """
-        available_roles = self.load_available_roles()
+
         if role in available_roles:
             return available_roles[role]
 
@@ -269,6 +331,8 @@ class Agent:
             ) if not formatted_messages else formatted_messages,
         )
 
+    '''Role Info Agent Class Attribute Handler'''
+
     def update_role_info_agent_class_attribute(self, role=None, short_name=None, description=None, system_message=None,
                                                intro_message=None):
         """
@@ -289,117 +353,6 @@ class Agent:
             "intro_message": intro_message
         }
         print(f'    {json.dumps(self.role_info, indent=4)}\n')
-
-    def respond_in_continued_conversation(self, input_message, agent=None, model=None):
-        """
-        Processes an input message within the context of a continued conversation using a language model.
-
-        Args:
-            input_message (str): The message from the user.
-            model (str, optional): The name of the language model to use. Defaults to the engine_name attribute.
-
-        Returns:
-            str: The chat transcript including messages from both the user and the AI.
-        """
-        # If there is no input message, return an error message
-        if not input_message:
-            return "Error: Unable to transcribe audio input."
-
-        # If no model is provided, use the default engine_name
-        if not model:
-            model = self.engine_name
-
-        # Append the user's message to the messages list
-        self.messages.append({"role": "user", "content": input_message})
-
-        # Generate a response using the language model
-        response = self.complete(model=model, formatted_messages=self.messages)
-
-        # Extract the AI-generated message from the response
-        system_message = response["choices"][0]["message"]
-
-        # Append the AI-generated message to the messages list
-        self.messages.append(system_message)
-
-        # Create a chat transcript using a list comprehension and join the resulting list into a single string
-        chat_transcript = "\n\n".join(
-            [f"{message['role']}: {message['content']}" for message in self.messages if message['role'] != 'system'])
-
-        # Return the chat transcript
-        return chat_transcript, system_message["content"]
-
-    def transcribe_and_respond(self, audio):
-        """
-        Transcribes an audio input and generates a chat transcript with the assistant's response.
-
-        Args:
-            self: An instance of the Agent class.
-            audio: A file path to the audio input.
-
-        Returns:
-            A string containing the chat transcript.
-        """
-        if not audio:
-            return "Error: No audio input received."
-
-        audio_file = open(audio, "rb")
-        transcript = openai.Audio.transcribe("whisper-1", audio_file)
-
-        chat_transcript = self.respond_in_continued_conversation(input_message=transcript["text"],
-                                                                 model=self.engine_name)
-        return chat_transcript
-
-    def resolve_existing_role_info(self,
-                                   role,
-                                   short_name=None,
-                                   description=None,
-                                   system_message=None,
-                                   intro_message=None,
-                                   **kwargs):
-        print(f"Warning: Role '{role}' already exists.")
-        action = input(
-            "Enter:"
-            "\n 'o' to overwrite with passed and autofill the rest,"
-            "\n 'n' to just type a new name as to not disturb the already created agent, "
-            "use the passed values and autofill the rest,"
-            "\n"
-        ).lower()
-
-        if not action:
-            action = kwargs.get("default_action_to_resolve_existing_role_info", "n")
-        if action in ["o", "overwrite"]:
-            self.update_role_info_agent_class_attribute(role, short_name, description, system_message, intro_message)
-        elif action in ["n", "enter_new_name"]:
-            role = input("Enter a new name for the role: ")
-            self.update_role_info_agent_class_attribute(role, short_name, description, system_message, intro_message)
-        else:
-            print("Invalid input. Try again.")
-            self.resolve_existing_role_info(role, short_name=short_name, description=description,
-                                            system_message=system_message,
-                                            intro_message=intro_message, **kwargs)
-
-    def get_available_context_from_role_info_attribute(self):
-        """
-        Retrieves the available context from the role_info attribute and formats it as a string.
-
-        Returns:
-            str: A string containing the available context from the role_info attribute.
-        """
-
-        context_keys = {
-            "role": "Role name",
-            "short_name": "Short name/initials to use e.g. when chatting to fit in profile logo",
-            "description": "Description",
-            "system_message": "System message",
-            "intro_message": "Initial/Welcome message"
-        }
-
-        # Append available context elements from the role_info attribute
-        context = [f"{key_label}: {self.role_info[key]}" for key, key_label in context_keys.items() if
-                   self.role_info[key]]
-
-        # Join the context elements into a single string
-        return " ".join(context)
 
     def fill_role_info_attribute_based_on_context(self, **kwargs):
         """
@@ -468,62 +421,120 @@ class Agent:
         # Update the role_info dictionary with the generated output
         self.role_info = dict(json.loads(output))
 
-    def create_agent_role(self, role, short_name=None, description=None, system_message=None, intro_message=None,
-                          **kwargs):
-        """High level function to create a new agent role and handle all the necessary steps to take.
+    def resolve_existing_role_info(self,
+                                   role,
+                                   short_name=None,
+                                   description=None,
+                                   system_message=None,
+                                   intro_message=None,
+                                   **kwargs):
+        print(f"Warning: Role '{role}' already exists.")
+        action = input(
+            "Enter:"
+            "\n 'o' to overwrite with passed and autofill the rest,"
+            "\n 'n' to just type a new name as to not disturb the already created agent, "
+            "use the passed values and autofill the rest,"
+            "\n"
+        ).lower()
 
-        role: str
-            The name of the role to be created.
-        description: str
-            A short description of the role.
-        system_message: str
-            A message that will be used by the assistant to inform itself of its role.
-        intro_message: str
-            A message that will be sent to the user when they join the server.
-        **kwargs: dict
-            Any additional keyword arguments to pass to the function.
-            auto_fill_missing_info: bool (default: False)
-                If True, then the function will attempt to fill in any missing information with the OpenAI API.
-            default_action_to_resolve_existing_role_info: str (default: "n")
-                The default action to take if the user does not provide an input when asked to resolve an existing role.
-                Options are "o" for overwrite or "n" for enter a new name
-
-        Returns:
-            self.role_info: dict
-                A dictionary containing the role information that was just created.
-        """
-
-        available_roles = self.load_available_roles()
-        agent_roles_path = kwargs.get("agent_roles_path", "roles.json")
-
-        '''* Check if role is already made, if so then resolve_existing_role_name
-                or 
-            * If role does not exist, then create a new role. Else, ask user if they want to overwrite, 
-                pick a new name, or generate a new name based on the system and welcome messages.'''
-        if role in available_roles:
-            self.resolve_existing_role_info(role=role, short_name=short_name,
-                                            description=description, system_message=system_message,
+        if not action:
+            action = kwargs.get("default_action_to_resolve_existing_role_info", "n")
+        if action in ["o", "overwrite"]:
+            self.update_role_info_agent_class_attribute(role, short_name, description, system_message, intro_message)
+        elif action in ["n", "enter_new_name"]:
+            role = input("Enter a new name for the role: ")
+            self.update_role_info_agent_class_attribute(role, short_name, description, system_message, intro_message)
+        else:
+            print("Invalid input. Try again.")
+            self.resolve_existing_role_info(role, short_name=short_name, description=description,
+                                            system_message=system_message,
                                             intro_message=intro_message, **kwargs)
 
-        else:
-            print("Since we are creating a new agent role we are going to use the provided "
-                  "information to fill in the blanks of those settings which were not provide")
-            self.update_role_info_agent_class_attribute(role, short_name, description, system_message, intro_message)
-            # Ensure at least one value in the role_info attribute is not None
-            assert any(self.role_info.values()), ValueError(
-                "No context available. Please provide at least one value for the role_info attribute.")
+    def get_available_context_from_role_info_attribute(self):
+        """
+        Retrieves the available context from the role_info attribute and formats it as a string.
 
-            assert self.role_info["role"] not in available_roles, "Role exists ... error handling didnt catch this"
+        Returns:
+            str: A string containing the available context from the role_info attribute.
+        """
 
-        if kwargs.get("auto_fill_missing_info", False): self.fill_role_info_attribute_based_on_context(**kwargs)
-        if kwargs.get("include_description_in_system_message", False):
-            self.role_info["system_message"] = f'{self.role_info["description"]} {self.role_info["system_message"]}'
+        context_keys = {
+            "role": "Role name",
+            "short_name": "Short name/initials to use e.g. when chatting to fit in profile logo",
+            "description": "Description",
+            "system_message": "System message",
+            "intro_message": "Initial/Welcome message"
+        }
 
-        available_roles[self.role_info["role"]] = self.role_info
-        self.write_json_to_agent_roles_path(agent_roles_path=agent_roles_path, available_roles=available_roles)
+        # Append available context elements from the role_info attribute
+        context = [f"{key_label}: {self.role_info[key]}" for key, key_label in context_keys.items() if
+                   self.role_info[key]]
 
-        if kwargs.get("load_role_after_creating_it", False): self.load_role(role=self.role_info["role"])
-        return self.role_info
+        # Join the context elements into a single string
+        return " ".join(context)
+
+    '''Inputs'''
+
+    def transcribe_and_respond(self, audio):
+        """
+        Transcribes an audio input and generates a chat transcript with the assistant's response.
+
+        Args:
+            self: An instance of the Agent class.
+            audio: A file path to the audio input.
+
+        Returns:
+            A string containing the chat transcript.
+        """
+        if not audio:
+            return "Error: No audio input received."
+
+        audio_file = open(audio, "rb")
+        transcript = openai.Audio.transcribe("whisper-1", audio_file)
+
+        chat_transcript = self.respond_in_continued_conversation(input_message=transcript["text"],
+                                                                 model=self.engine_name)
+        return chat_transcript
+
+    '''Outputs'''
+
+    def respond_in_continued_conversation(self, input_message, agent=None, model=None):
+        """
+        Processes an input message within the context of a continued conversation using a language model.
+
+        Args:
+            input_message (str): The message from the user.
+            model (str, optional): The name of the language model to use. Defaults to the engine_name attribute.
+
+        Returns:
+            str: The chat transcript including messages from both the user and the AI.
+        """
+        # If there is no input message, return an error message
+        if not input_message:
+            return "Error: Unable to transcribe audio input."
+
+        # If no model is provided, use the default engine_name
+        if not model:
+            model = self.engine_name
+
+        # Append the user's message to the messages list
+        self.messages.append({"role": "user", "content": input_message})
+
+        # Generate a response using the language model
+        response = self.complete(model=model, formatted_messages=self.messages)
+
+        # Extract the AI-generated message from the response
+        system_message = response["choices"][0]["message"]
+
+        # Append the AI-generated message to the messages list
+        self.messages.append(system_message)
+
+        # Create a chat transcript using a list comprehension and join the resulting list into a single string
+        chat_transcript = "\n\n".join(
+            [f"{message['role']}: {message['content']}" for message in self.messages if message['role'] != 'system'])
+
+        # Return the chat transcript
+        return chat_transcript, system_message["content"]
 
     # todo need to add interact method to act as an input out handler for the agent. Needs to be flexible enough to accept transcription, chat_completion, and text to speech for both AI-User and AI-AI interactions
     #   Means needs to have various types of connections to the user and other agents
@@ -557,7 +568,7 @@ if __name__ == "__main__":
                 default_action_to_resolve_existing_role_info="enter_new_name",
                 #
                 load_role_after_creating_it=True,
-            #
+                #
                 include_description_in_system_message=True
             )
         )

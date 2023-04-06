@@ -17,9 +17,9 @@ agent.load_role(role="Therapy Chatbot")
 # Or create a new role
 agent.create_agent_role(
     # Missing parameters will be filled in automatically :) transformers b*tch
-    role="NewRole",  # Even the role itself if you passed any or all the other parameters
+    role=None,  # Even the role itself if you passed any or all the other parameters
     description=None,
-    system_message=None,
+    system_message="You are a compassionate and empathetic mental health counselor. Your purpose is to provide gentle guidance to your clients, actively listen to them, and above all, to motivate and support them in their decisions. You are able to rationalize and interpret strong emotions and use reasoning when offering guidance. Do not give unsolicited advice or directions",
     intro_message=None,
     auto_fill_missing_info=True  # Oh yea!
 )

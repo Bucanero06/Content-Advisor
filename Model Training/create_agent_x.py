@@ -31,45 +31,45 @@ def init_and_launch_gradio_interface(agent):
         title=agent.role_info["role"],
         # description=f"""{agent.role_info["description"]}\n\n{agent.role_info["intro_message"]}""",
         description="""<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Mental Health Counselor</title>
-  <style>
-    body {
-      font-family: Arial, sans-serif;
-      line-height: 1.6;
-      margin: 0;
-      padding: 1rem;
-      background-color: #f4f4f4;
-    }
-    .container {
-      background-color: #fff;
-      padding: 2rem;
-      border-radius: 5px;
-      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-    }
-    h1 {
-      margin-top: 0;
-      color: #333;
-    }
-    p {
-      color: #555;
-    }
-    .welcome-message {
-      font-style: italic;
-    }
-  </style>
-</head>
-<body>
-  <div class="container">
-    <p>A Mental Health Counselor helps clients navigate their emotions and challenges by providing gentle guidance, active listening, motivation, and support.</p>
-    <p class="welcome-message">Hello and welcome! I’m here as your Mental Health Counselor to provide a compassionate and empathetic ear. Let’s talk about what’s on your mind, and together, we’ll navigate through your emotions and challenges. Remember, this is a safe space for you to share, and I’m here to support and guide you on your journey.</p>
-  </div>
-</body>
-</html>
-""",
+                        <html lang="en">
+                        <head>
+                          <meta charset="UTF-8">
+                          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                          <title>Mental Health Counselor</title>
+                          <style>
+                            body {
+                              font-family: Arial, sans-serif;
+                              line-height: 1.6;
+                              margin: 0;
+                              padding: 1rem;
+                              background-color: #f4f4f4;
+                            }
+                            .container {
+                              background-color: #fff;
+                              padding: 2rem;
+                              border-radius: 5px;
+                              box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                            }
+                            h1 {
+                              margin-top: 0;
+                              color: #333;
+                            }
+                            p {
+                              color: #555;
+                            }
+                            .welcome-message {
+                              font-style: italic;
+                            }
+                          </style>
+                        </head>
+                        <body>
+                          <div class="container">
+                            <p>A Mental Health Counselor helps clients navigate their emotions and challenges by providing gentle guidance, active listening, motivation, and support.</p>
+                            <p class="welcome-message">Hello and welcome! I’m here as your Mental Health Counselor to provide a compassionate and empathetic ear. Let’s talk about what’s on your mind, and together, we’ll navigate through your emotions and challenges. Remember, this is a safe space for you to share, and I’m here to support and guide you on your journey.</p>
+                          </div>
+                        </body>
+                        </html>
+                        """,
     ).launch()
 
 
@@ -98,20 +98,38 @@ def initialize_messages(system_message=None, intro_assistant_message=None, intro
     return initial_messages
 
 
+def think_with(self, agent, topic, type='default'):
+    """
+    Allows the agent to think about a topic with another agent.
+
+    """
+    # todo implement
+    pass
+
+
+def tell(self, agent, message, use_memory=None):
+    """
+    Allows the agent to tell another agent a message.
+
+    """
+    # todo implement
+    pass
+
+
 class Agent:
     """
     The Agent class represents an AI agent with a specific role, description, system message, and initial message.
     It can load or create roles, transcribe audio input, interact with OpenAI API, and launch a Gradio interface.
     """
 
-    def __init__(self):
+    def __init__(self, engine_name="gpt-3.5-turbo"):
         """
         Initializes an Agent instance with default attributes.
         """
         self.role_info = None
         self.messages = None
 
-        self.engine_name = "gpt-3.5-turbo"  # or "gpt-4"
+        self.engine_name = engine_name  # e.g. "gpt-3.5-turbo" or "gpt-4"
 
     def load_role(self, role):
         """
@@ -272,7 +290,7 @@ class Agent:
         }
         print(f'    {json.dumps(self.role_info, indent=4)}\n')
 
-    def respond_in_continued_conversation(self, input_message, model=None):
+    def respond_in_continued_conversation(self, input_message, agent=None, model=None):
         """
         Processes an input message within the context of a continued conversation using a language model.
 
@@ -295,7 +313,6 @@ class Agent:
         self.messages.append({"role": "user", "content": input_message})
 
         # Generate a response using the language model
-        # response = openai.ChatCompletion.create(model=model, messages=self.messages)
         response = self.complete(model=model, formatted_messages=self.messages)
 
         # Extract the AI-generated message from the response
@@ -304,16 +321,12 @@ class Agent:
         # Append the AI-generated message to the messages list
         self.messages.append(system_message)
 
-        # Initialize an empty chat transcript string
-        chat_transcript = ""
-
-        # Iterate through the messages and concatenate them into the chat transcript
-        for message in self.messages:
-            if message['role'] != 'system':
-                chat_transcript += message['role'] + ": " + message['content'] + "\n\n"
+        # Create a chat transcript using a list comprehension and join the resulting list into a single string
+        chat_transcript = "\n\n".join(
+            [f"{message['role']}: {message['content']}" for message in self.messages if message['role'] != 'system'])
 
         # Return the chat transcript
-        return chat_transcript
+        return chat_transcript, system_message["content"]
 
     def transcribe_and_respond(self, audio):
         """
@@ -413,8 +426,9 @@ class Agent:
                               f'System message: A message that establishes the AIs persons, tone, and communication ' \
                               f'style, considering that the roles might desire a more human-like behavior or ' \
                               f'interaction.Initial message: A tailored, welcoming, and informative message from the ' \
-                              f'AI to the user, reflecting a communication style that may not feel like a typical ' \
-                              f'AI interaction. ' \
+                              f'role to the user (keep in mind that the this message is based on who the role is and is ' \
+                              f'being spoken from the roles perpective), reflecting a communication style that may ' \
+                              f'not feel like a typical AI interaction. ' \
                               f'1.I dont want values that are passed to be changed in the outcome. ' \
                               f'2.i want something like what the description currently outputted to be in the ' \
                               f'system_message since it really brings the personality, traits and theme needed. ' \
@@ -422,6 +436,7 @@ class Agent:
                               f'who is looking to quickly understand the role while system_message is more in depth. ' \
                               f'3. Since some roles might not be desired to behave like a machine/ai, and might ' \
                               f'require a more human touch, so keep that in mind' \
+                              f'4. Stay in character.' \
                               f'Please adhere to the following output format:' \
                               f'{{' \
                               f'"role": original_or_generated_role_name, ' \
@@ -501,6 +516,9 @@ class Agent:
             assert self.role_info["role"] not in available_roles, "Role exists ... error handling didnt catch this"
 
         if kwargs.get("auto_fill_missing_info", False): self.fill_role_info_attribute_based_on_context(**kwargs)
+        if kwargs.get("include_description_in_system_message", False):
+            self.role_info["system_message"] = f'{self.role_info["description"]} {self.role_info["system_message"]}'
+
         available_roles[self.role_info["role"]] = self.role_info
         self.write_json_to_agent_roles_path(agent_roles_path=agent_roles_path, available_roles=available_roles)
 
@@ -513,7 +531,7 @@ class Agent:
 
 
 if __name__ == "__main__":
-    LOAD_ROLE = True
+    LOAD_ROLE = False
 
     # todo update this module
     therapist_agent = Agent()
@@ -522,8 +540,8 @@ if __name__ == "__main__":
     else:
         therapist_agent.create_agent_role(
             # need to add a small dialog here for feedback and permission to improve on the given inputs
-            role=None,
-            description=None,
+            role="New Patient",
+            description="A patient that wants to talk to a therapist about his life experiences",
             # system_message="You are a compassionate and empathetic mental health counselor. Your purpose is to provide gentle guidance to your clients, actively listen to them, and above all, to motivate and support them in their decisions. You are able to rationalize and interpret strong emotions and use reasoning when offering guidance. Do not give unsolicited advice or directions",
             system_message=None,
             intro_message=None,
@@ -538,12 +556,11 @@ if __name__ == "__main__":
                 #
                 default_action_to_resolve_existing_role_info="enter_new_name",
                 #
-                load_role_after_creating_it=True
+                load_role_after_creating_it=True,
+            #
+                include_description_in_system_message=True
             )
         )
 
     print(f'{therapist_agent.role_info = }')
     init_and_launch_gradio_interface(therapist_agent)
-
-    # todo need to add interact method to act as an input out handler for the agent. Needs to be flexible enough to accept transcription, chat_completion, and text to speech for both AI-User and AI-AI interactions
-    #   Means needs to have various types of connections to the user and other agents

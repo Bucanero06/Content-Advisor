@@ -8,11 +8,4 @@
   <component name="PackageRequirementsSettings">
     <option name="keepMatchingSpecifier" value="false" />
   </component>
-  <component name="PyNamespacePackagesService">
-    <option name="namespacePackageFolders">
-      <list>
-        <option value="$MODULE_DIR$/Model Training/Django-AgentGPT-Interface" />
-      </list>
-    </option>
-  </component>
 </module>

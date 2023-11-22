@@ -1,9 +1,9 @@
 import gradio as gr
 import openai, config, subprocess
 
-OPENAI_API_KEY = "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"
-# openai.api_key = config.OPENAI_API_KEY
-openai.api_key = OPENAI_API_KEY
+
+openai.api_key = config.OPENAI_API_KEY
+
 
 
 
